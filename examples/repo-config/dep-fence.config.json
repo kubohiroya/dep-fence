@@ -1,0 +1,7 @@
+{
+  "allowSkipLibCheck": [
+    "@your/legacy-chart",
+    "@your/experimental-map"
+  ]
+}
+

@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true
+  },
+  "checkDeps": {
+    "allowSkipLibCheck": true,
+    "reason": "Temporary 3rd‑party types mismatch; scheduled removal by 2025‑10"
+  }
+}
+
