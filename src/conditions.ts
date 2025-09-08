@@ -37,3 +37,27 @@ export const isBrowser = () => has('browser');
 export const isNode = () => has('node');
 export const isWorker = () => has('worker');
 export const hasSkipLibCheck = () => has('skipLibCheck');
+
+// Extended helpers
+export function hasExportSubpath(pattern: string): Condition {
+  const re = new RegExp(pattern);
+  return (m: PackageMeta) => {
+    const exp = (m.pkgJson && m.pkgJson.exports) || {};
+    const keys = typeof exp === 'string' ? ['.'] : Object.keys(exp);
+    const ok = keys.some((k) => re.test(k));
+    return { ok, because: `exports has subpath matching /${pattern}/` };
+  };
+}
+
+export function publishesWorkers(): Condition {
+  return hasExportSubpath('^\\./workers/');
+}
+
+export function isMultiEntry(): Condition {
+  return (m: PackageMeta) => {
+    const exp = (m.pkgJson && m.pkgJson.exports) || {};
+    const keys = typeof exp === 'string' ? ['.'] : Object.keys(exp);
+    const ok = keys.some((k) => k === './ui' || k === './worker' || k.startsWith('./workers/'));
+    return { ok, because: 'package publishes multiple entry points (./ui or ./worker/*)' };
+  };
+}

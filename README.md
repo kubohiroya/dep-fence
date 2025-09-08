@@ -35,6 +35,7 @@ Requirement: Node.js >= 18
 dep-fence            # pretty report
 dep-fence --json     # JSON output
 dep-fence --strict   # exit 1 if any ERROR
+dep-fence --config path/to/dep-fence.config.ts  # explicit policy file (TS/JS supported)
 ```
 
 Example (gate in CI):
@@ -136,6 +137,7 @@ See the `examples/` directory for ready‑to‑copy templates:
 
 - `examples/policies/minimal/dep-fence.config.ts` — small, readable policy set.
 - `examples/policies/strict-ui/dep-fence.config.ts` — stricter UI policy with severity overrides.
+- `examples/policies/source-import-ban/dep-fence.config.ts` — ban specific symbols from a package.
 - `examples/repo-config/dep-fence.config.json` — repo‑wide settings (`allowSkipLibCheck`, etc.).
 - `examples/tsconfig/tsconfig.allow-skiplibcheck.json` — per‑package rationale for `skipLibCheck`.
 - `examples/tsup/tsup.base.config.ts` — central `external` list for monorepos.
@@ -166,6 +168,70 @@ DEP_FENCE_REPO_CONFIG=examples/repo-config/dep-fence.config.json pnpm dep-fence
   - `maplibre-direct-dep` (direct MapLibre deps outside the wrapper package)
 
 All findings include “Because: …” to surface rationale.
+
+### Default Policies (catalog) 📚
+
+Each default policy explains why it applies (Because) and targets specific attributes:
+
+- `ui-externals-and-peers` — UI packages must not bundle React/MUI; rely on peers. Rules: `ui-in-deps`, `ui-missing-peer`, `peer-in-external`.
+- `tsup-peer-hygiene` — bundlers must externalize peers. Rules: `peer-in-external`, `external-in-deps`.
+- `publishable-tsconfig-hygiene` — keep published `tsconfig` clean. Rules: `tsconfig-no-base`, `paths-direct-src`.
+- `publishable-local-shims` — avoid long‑lived local `*.d.ts`. Rule: `local-shims` (default WARN; can be raised).
+- `jsx-option-for-tsx` — TSX requires `jsx: react-jsx`. Rule: `jsx-mismatch`.
+- `skipLibCheck-governance` — permissioned toggle with reasons. Rules: `skipLibCheck-*`.
+- `non-ui-paths-hygiene` — discourage cross‑src refs broadly. Rule: `paths-direct-src`.
+- `maplibre-encapsulation` — only wrapper package may depend on MapLibre. Rule: `maplibre-direct-dep`.
+
+Severity override example:
+
+```ts
+export const policies = [
+  {
+    id: 'ui-externals-and-peers',
+    when: all(isUI(), isPublishable()),
+    because: '…',
+    rules: ['ui-in-deps', 'ui-missing-peer', 'peer-in-external'],
+    severityOverride: { 'ui-missing-peer': 'ERROR' }
+  }
+];
+```
+
+### Opt‑in Extensions (examples) 🧪
+
+Additional rules and helpers can be enabled via a policy file:
+
+- `source-import-ban` — ban specific named imports from a module. See `examples/policies/source-import-ban/dep-fence.config.ts`.
+- `tsconfig-paths` — enforce `paths` to point to `dist/*.d.ts` and/or forbid patterns.
+- `package-exports-guard` — guard subpaths (e.g., forbid `types` for `./workers/*`).
+- `package-types-dist` — ensure package `types` and `exports[entry].types` point to `dist/*.d.ts`.
+
+### Advanced: TypeScript Config Loader and Custom Rules 🧩
+
+- dep‑fence can load `dep-fence.config.ts` without ts-node/tsx. If Node can’t import `.ts`, it falls back to a built‑in lightweight transpiler (type‑only strips) and evaluates the module.
+- You can also register custom runtime rules per policy:
+
+```ts
+import type { Policy } from 'dep-fence/types';
+
+export const policies: Policy[] = [
+  {
+    id: 'my-custom-checks',
+    when: isPublishable(),
+    because: 'repo‑specific validation',
+    rules: [{
+      rule: 'custom',
+      id: 'check-pkg-field',
+      run: (ctx) => {
+        const f = [] as any[];
+        if (!ctx.pkgJson.customField) {
+          f.push({ packageName: ctx.pkgName, packageDir: ctx.pkgDir, rule: 'check-pkg-field', severity: 'WARN', message: 'missing customField', because: ctx.because });
+        }
+        return f;
+      }
+    }]
+  }
+];
+```
 
 ## How it works 🧭
 
