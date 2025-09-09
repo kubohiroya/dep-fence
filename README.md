@@ -22,6 +22,9 @@ Policy‑first dependency and TypeScript hygiene for monorepos — with reasons.
 - Keep `tsconfig` healthy (baseline inheritance, forbid `../src` direct references, JSX option sanity).
 - Every message includes “Because: …”, making policy intent visible. 🗣️
 
+> This complements existing tools — use with [dependency‑cruiser](https://github.com/sverweij/dependency-cruiser) / [ESLint](https://eslint.org) / [syncpack](https://github.com/JamieMason/syncpack) / [publint](https://publint.dev).
+
+
 ## Install 📦
 
 Local (recommended):
@@ -322,6 +325,7 @@ DEP_FENCE_REPO_CONFIG=examples/repo-config/dep-fence.config.json pnpm dep-fence
 
 - [ESLint](https://eslint.org) or dep‑fence?
   - Both. ESLint covers in‑file quality; dep‑fence enforces cross‑file/package boundaries.
+
 - Why not just [dependency‑cruiser](https://github.com/sverweij/dependency-cruiser)?
   - It’s great for exploration/visualization. dep‑fence focuses on CI‑first, opinionated defaults for monorepos with a small set of high‑signal rules.
 - How do we roll it out gradually?
