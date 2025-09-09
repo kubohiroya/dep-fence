@@ -1,6 +1,6 @@
 {
   "name": "dep-fence",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "author": "Hiroya Kubo <hiroya@cuc.ac.jp>",
   "description": "Policy-driven dependency guard for monorepos: enforce package boundaries, peerDeps/externals alignment, and TypeScript config hygiene",
   "type": "module",
@@ -15,6 +15,10 @@
     "./conditions": {
       "types": "./dist/conditions.d.ts",
       "default": "./dist/conditions.mjs"
+    },
+    "./guards": {
+      "types": "./dist/guards.d.ts",
+      "default": "./dist/guards.mjs"
     },
     "./types": "./dist/types.d.ts"
   },

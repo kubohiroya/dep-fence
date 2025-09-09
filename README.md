@@ -24,6 +24,7 @@ Policy‑first dependency and TypeScript hygiene for monorepos — with reasons.
 
 > This complements existing tools — use with [dependency‑cruiser](https://github.com/sverweij/dependency-cruiser) / [ESLint](https://eslint.org) / [syncpack](https://github.com/JamieMason/syncpack) / [publint](https://publint.dev).
 
+
 ## Install 📦
 
 Local (recommended):
@@ -78,6 +79,23 @@ dep-fence --json | jq
 ```
 
 Exit code: only with `--strict`, returns 1 when any ERROR exists.
+
+## Guards (pre‑commit / pre‑push) 🔒
+
+In addition to package policies, dep‑fence ships lightweight repository‑level guards under the `dep-fense/guards` entry. They are designed for Git hooks (predictable, no hidden state):
+
+- `allowed-dirs` — Commit scope guard: staged files must be under allowed globs.
+- `mtime-compare` — Advisory: detect files newer than your rules/SSOT baseline.
+- `upstream-conflict` — Optimistic conflict detection: fail if upstream has other‑author changes touching protected paths since your base.
+
+Try the examples:
+
+```bash
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit
+pnpm dlx tsx examples/guards/run.ts --mode pre-push
+```
+
+Copy `examples/guards/guards.config.ts` into your repo (e.g. `.mrtask/dep-fense.guards.ts`) and point hooks to a small runner (see the example `run.ts`).
 
 ## Zero‑Config Mode 🚀
 
@@ -307,7 +325,8 @@ DEP_FENCE_REPO_CONFIG=examples/repo-config/dep-fence.config.json pnpm dep-fence
 
 - [ESLint](https://eslint.org) or dep‑fence?
   - Both. ESLint covers in‑file quality; dep‑fence enforces cross‑file/package boundaries.
-- Why not just dependency‑cruiser?
+
+- Why not just [dependency‑cruiser](https://github.com/sverweij/dependency-cruiser)?
   - It’s great for exploration/visualization. dep‑fence focuses on CI‑first, opinionated defaults for monorepos with a small set of high‑signal rules.
 - How do we roll it out gradually?
   - Start with WARN and one or two forbid rules; raise to ERROR once violations are addressed.
@@ -434,6 +453,10 @@ jobs:
       - run: pnpm i --frozen-lockfile
       - run: pnpm dep-fence  # refer to your package.json script
 ```
+
+## Author
+
+Hiroya Kubo hiroya@cuc.ac.jp
 
 ## License 📄
 
