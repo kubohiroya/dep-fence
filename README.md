@@ -433,6 +433,15 @@ jobs:
       - run: pnpm dep-fence  # refer to your package.json script
 ```
 
+
+
+
+
+
+## Author
+
+Hiroya Kubo hiroya@cuc.ac.jp
+
 ## License 📄
 
 MIT
