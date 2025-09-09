@@ -16,6 +16,7 @@ This folder contains sample configurations you can copy into your repo.
 - policies/skiplibcheck-governance/dep-fence.config.ts — govern skipLibCheck usage (OK/NG)
 - policies/non-ui-paths-hygiene/dep-fence.config.ts — discourage ../src across the board (OK/NG)
 - policies/maplibre-encapsulation/dep-fence.config.ts — isolate MapLibre deps to a wrapper pkg (OK/NG)
+- guards/guards.config.ts — example guard rules (allowed-dirs, mtime-compare, upstream-conflict)
 - repo-config/dep-fence.config.json — repo‑wide operational settings
 - tsconfig/tsconfig.allow-skiplibcheck.json — per‑package skipLibCheck with rationale
 - tsup/tsup.base.config.ts — example of declaring externals shared across packages
@@ -47,6 +48,11 @@ DEP_FENCE_CONFIG=examples/policies/skiplibcheck-governance/dep-fence.config.ts p
 
 # jsx option for TSX
 DEP_FENCE_CONFIG=examples/policies/jsx-option-for-tsx/dep-fence.config.ts pnpm dep-fence
+
+# Guards (pre-commit / pre-push style)
+# Run with tsx directly (or copy these into your repo hooks)
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit
+pnpm dlx tsx examples/guards/run.ts --mode pre-push
 ```
 
 Note: dep‑fence scans packages in your workspace (e.g. `packages/*/**/package.json`).

@@ -77,6 +77,23 @@ dep-fence --json | jq
 
 Exit code: only with `--strict`, returns 1 when any ERROR exists.
 
+## Guards (pre‑commit / pre‑push) 🔒
+
+In addition to package policies, dep‑fence ships lightweight repository‑level guards under the `dep-fense/guards` entry. They are designed for Git hooks (predictable, no hidden state):
+
+- `allowed-dirs` — Commit scope guard: staged files must be under allowed globs.
+- `mtime-compare` — Advisory: detect files newer than your rules/SSOT baseline.
+- `upstream-conflict` — Optimistic conflict detection: fail if upstream has other‑author changes touching protected paths since your base.
+
+Try the examples:
+
+```bash
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit
+pnpm dlx tsx examples/guards/run.ts --mode pre-push
+```
+
+Copy `examples/guards/guards.config.ts` into your repo (e.g. `.mrtask/dep-fense.guards.ts`) and point hooks to a small runner (see the example `run.ts`).
+
 ## Zero‑Config Mode 🚀
 
 You can run dep‑fence with zero configuration in a typical monorepo:
@@ -432,11 +449,6 @@ jobs:
       - run: pnpm i --frozen-lockfile
       - run: pnpm dep-fence  # refer to your package.json script
 ```
-
-
-
-
-
 
 ## Author
 
