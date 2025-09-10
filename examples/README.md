@@ -17,6 +17,9 @@ This folder contains sample configurations you can copy into your repo.
 - policies/non-ui-paths-hygiene/dep-fence.config.ts — discourage ../src across the board (OK/NG)
 - policies/maplibre-encapsulation/dep-fence.config.ts — isolate MapLibre deps to a wrapper pkg (OK/NG)
 - guards/guards.config.ts — example guard rules (allowed-dirs, mtime-compare, upstream-conflict)
+  - guards/guards.ui-peers.config.ts — enforce UI libs as peers and align bundler externals
+  - guards/guards.pkg-exports.config.ts — verify package exports paths exist
+  - guards/guards.tsconfig-hygiene.config.ts — tsconfig baseline/JSX/skipLibCheck governance
 - repo-config/dep-fence.config.json — repo‑wide operational settings
 - tsconfig/tsconfig.allow-skiplibcheck.json — per‑package skipLibCheck with rationale
 - tsup/tsup.base.config.ts — example of declaring externals shared across packages
@@ -53,6 +56,11 @@ DEP_FENCE_CONFIG=examples/policies/jsx-option-for-tsx/dep-fence.config.ts pnpm d
 # Run with tsx directly (or copy these into your repo hooks)
 pnpm dlx tsx examples/guards/run.ts --mode pre-commit
 pnpm dlx tsx examples/guards/run.ts --mode pre-push
+
+# Try specific guard configs
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.ui-peers.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.pkg-exports.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.tsconfig-hygiene.config.ts
 ```
 
 Note: dep‑fence scans packages in your workspace (e.g. `packages/*/**/package.json`).

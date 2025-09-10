@@ -2,16 +2,17 @@
 // Usage:
 //   pnpm dlx tsx examples/guards/run.ts --mode pre-commit
 //   pnpm dlx tsx examples/guards/run.ts --mode pre-push
-import path from 'node:path';
+import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { runRules } from '../../src/guards/index';
+
 import type { GuardMode, Rule } from '../../src/guards/types';
 
 const mode = (process.argv.includes('--mode')
   ? (process.argv[process.argv.indexOf('--mode') + 1] as GuardMode)
   : 'pre-commit') as GuardMode;
 
-const cfgRel = process.env.DEP_FENSE_GUARDS || 'examples/guards/guards.config.ts';
+const argIdx = process.argv.indexOf('--config');
+const cfgRel = (argIdx > -1 ? process.argv[argIdx + 1] : process.env.DEP_FENSE_GUARDS) || 'examples/guards/guards.config.ts';
 const cfgPath = path.resolve(process.cwd(), cfgRel);
 
 const mod = await import(pathToFileURL(cfgPath).toString());
@@ -45,4 +46,3 @@ if (failures.length) {
 }
 
 console.log(`dep-fense guards: ${mode} OK`);
-
