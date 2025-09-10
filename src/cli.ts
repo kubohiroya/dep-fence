@@ -2,7 +2,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { runWithPolicies } from './engine';
-import { printFindings, findingsToJson } from './reporters';
+import { printFindings, findingsToJson, findingsToYaml } from './reporters';
 import { defaultPolicies } from './config.default';
 import * as os from 'node:os';
 
@@ -78,6 +78,8 @@ async function main() {
   const findings = runWithPolicies(policies);
   if (process.argv.includes('--json')) {
     console.log(findingsToJson(findings));
+  } else if (process.argv.includes('--yaml')) {
+    console.log(findingsToYaml(findings));
   } else {
     printFindings(findings);
   }

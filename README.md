@@ -48,6 +48,7 @@ Requirement: Node.js >= 18
 ```bash
 dep-fence            # pretty report
 dep-fence --json     # JSON output
+dep-fence --yaml     # YAML output
 dep-fence --strict   # exit 1 if any ERROR
 dep-fence --config path/to/dep-fence.config.ts  # explicit policy file (TS/JS supported)
 ```
@@ -76,6 +77,24 @@ JSON:
 
 ```bash
 dep-fence --json | jq
+```
+
+YAML:
+
+```bash
+dep-fence --yaml
+```
+
+Example YAML output:
+
+```yaml
+findings:
+  - packageName: "@your/ui-button"
+    packageDir: "/path/to/packages/ui-button"
+    rule: ui-in-deps
+    severity: ERROR
+    message: "UI libs should be peerDependencies (not dependencies): react"
+    because: "UI packages should not bundle React/MUI; rely on host peers."
 ```
 
 Exit code: only with `--strict`, returns 1 when any ERROR exists.
