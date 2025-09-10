@@ -1,6 +1,6 @@
 {
   "name": "dep-fence",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": "Hiroya Kubo <hiroya@cuc.ac.jp>",
   "description": "Policy-driven dependency guard for monorepos: enforce package boundaries, peerDeps/externals alignment, and TypeScript config hygiene",
   "type": "module",
@@ -22,7 +22,9 @@
     },
     "./types": "./dist/types.d.ts"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "prepublishOnly": "pnpm run build",
@@ -31,14 +33,30 @@
   "main": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "sideEffects": false,
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "yaml": "^2.8.1"
+  },
   "devDependencies": {
     "@types/node": "^18.19.0",
     "tsup": "^8.5.0",
     "tsx": "^4.20.5",
     "typescript": "^4.9.5"
   },
-  "keywords":["monorepo","dependencies","linter","package-boundaries","peer-dependencies","tsup","externals","typescript","tsconfig","skipLibCheck"],
+  "keywords": [
+    "monorepo",
+    "dependencies",
+    "linter",
+    "package-boundaries",
+    "peer-dependencies",
+    "tsup",
+    "externals",
+    "typescript",
+    "tsconfig",
+    "skipLibCheck"
+  ],
   "license": "MIT",
-  "homepage": "https://github.com/kubohiroya/dep-fence"
+  "homepage": "https://github.com/kubohiroya/dep-fence",
 }
