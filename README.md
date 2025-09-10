@@ -88,6 +88,11 @@ In addition to package policies, dep‑fence ships lightweight repository‑leve
 - `mtime-compare` — Advisory: detect files newer than your rules/SSOT baseline.
 - `upstream-conflict` — Optimistic conflict detection: fail if upstream has other‑author changes touching protected paths since your base.
 
+New guards for monorepo publishing/build hygiene:
+- `pkg-exports-exist` — Verify package.json main/module/exports paths point to existing files (prevents publish/bundler breakage).
+- `pkg-ui-peers` — Enforce UI singletons as peers and align bundler externals (flags: ui-in-deps, ui-missing-peer, peer-in-external, external-in-deps).
+- `tsconfig-hygiene` — Keep tsconfig healthy (extends repo base, jsx option sanity, skipLibCheck governance with allowlist/justification).
+
 Try the examples:
 
 ```bash
@@ -96,6 +101,33 @@ pnpm dlx tsx examples/guards/run.ts --mode pre-push
 ```
 
 Copy `examples/guards/guards.config.ts` into your repo (e.g. `.mrtask/dep-fense.guards.ts`) and point hooks to a small runner (see the example `run.ts`).
+
+Example configurations for the new guards are available:
+
+```bash
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
+  --config examples/guards/guards.ui-peers.config.ts
+
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
+  --config examples/guards/guards.pkg-exports.config.ts
+
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
+  --config examples/guards/guards.tsconfig-hygiene.config.ts
+```
+
+Or import the rules directly:
+
+```ts
+import { pkgUiPeersRule, pkgExportsExistRule, tsconfigHygieneRule } from 'dep-fence/guards';
+
+export default [
+  pkgUiPeersRule({ exclude: ['@your/app'] }),
+  pkgExportsExistRule({ roots: ['packages', 'app'] }),
+  tsconfigHygieneRule({
+    skipLibCheck: { allowedPackages: ['@your/temp-exception'], requireReasonField: true, action: 'warn' },
+  }),
+];
+```
 
 ## Zero‑Config Mode 🚀
 
