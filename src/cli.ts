@@ -2,9 +2,10 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { runWithPolicies } from './engine';
-import { printFindings, findingsToJson } from './reporters';
+import { printFindings, findingsToJson, findingsToYaml, findingsToYamlByRule, findingsToYamlBySeverity } from './reporters';
 import { defaultPolicies } from './config.default';
 import * as os from 'node:os';
+import { fileURLToPath } from 'node:url';
 
 function getArg(name: string): string | null {
   const i = process.argv.indexOf(name);
@@ -14,7 +15,7 @@ function getArg(name: string): string | null {
 
 async function loadUserPolicies(): Promise<any | null> {
   const root = findRepoRoot(process.cwd());
-  const cliConfig = getArg('--config');
+  const cliConfig = getArg('--config') ?? getArg('-c');
   const candidates = [
     cliConfig || '',
     process.env.DEP_FENCE_CONFIG || '',
@@ -73,13 +74,61 @@ function transpileTsConfigToTemp(file: string): string {
 }
 
 async function main() {
+  // support -v/--version
+  if (process.argv.includes('-v') || process.argv.includes('--version')) {
+    try {
+      const here = path.dirname(fileURLToPath(import.meta.url));
+      const pkgPath = path.join(here, '..', 'package.json');
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as { version?: string; name?: string };
+      console.log(pkg.version || '0.0.0');
+    } catch {
+      console.log('unknown');
+    }
+    return;
+  }
+
+  // support -h/--help
+  if (process.argv.includes('-h') || process.argv.includes('--help')) {
+    const lines = [
+      'Usage: dep-fence [options]',
+      '',
+      'Options:',
+      '  -h, --help            Show this help and exit',
+      '  -v, --version         Print version and exit',
+      '  -c, --config <file>   Path to dep-fence.config.(ts|mjs|js)',
+      '  -f, --format <fmt>    Output format: pretty|json|yaml (default: yaml)',
+      '  -g, --group-by <key>  YAML grouping: package|rule|severity (default: package)',
+      '  --strict              Exit with code 1 if any ERROR',
+      '',
+      'Examples:',
+      '  dep-fence                 # YAML (default)',
+      '  dep-fence -f pretty            # human‑readable',
+      '  dep-fence -f json | jq',
+      '  dep-fence -f yaml -g severity',
+      '  dep-fence --strict',
+      '  dep-fence -c ./dep-fence.config.ts',
+    ];
+    console.log(lines.join(os.EOL));
+    return;
+  }
   const user = await loadUserPolicies();
   const policies = Array.isArray(user) ? user : defaultPolicies;
   const findings = runWithPolicies(policies);
-  if (process.argv.includes('--json')) {
-    console.log(findingsToJson(findings));
-  } else {
-    printFindings(findings);
+  let format = getArg('--format') ?? getArg('-f');
+  const groupBy = (getArg('--group-by') ?? getArg('-g')) || 'package';
+  switch (format) {
+    case 'json':
+      console.log(findingsToJson(findings));
+      break;
+    case 'pretty':
+      printFindings(findings);
+      break;
+    case 'yaml':
+    default:
+      if (groupBy === 'rule') console.log(findingsToYamlByRule(findings));
+      else if (groupBy === 'severity') console.log(findingsToYamlBySeverity(findings));
+      else console.log(findingsToYaml(findings));
+      break;
   }
   const hasError = findings.some((f) => f.severity === 'ERROR');
   if (process.argv.includes('--strict') && hasError) process.exit(1);

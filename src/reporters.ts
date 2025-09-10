@@ -39,6 +39,24 @@ export function findingsToYamlByRule(findings: Finding[]) {
   return yaml.stringify(out);
 }
 
+export function findingsToYamlBySeverity(findings: Finding[]) {
+  if (!findings.length) return yaml.stringify({ result: 'All packages passed policy checks.' });
+  const bySeverity = groupBy(findings, (f) => f.severity);
+  const out: Record<string, any[]> = {};
+  for (const [sev, fs] of bySeverity) {
+    out[sev] = fs.map(f => {
+      const entry: any = {
+        package: f.packageName,
+        type: f.rule,
+        message: f.message,
+      };
+      if (f.because) entry.reason = f.because;
+      return entry;
+    });
+  }
+  return yaml.stringify(out);
+}
+
 export function findingsToYaml(findings: Finding[]) {
   if (!findings.length) return yaml.stringify({ result: 'All packages passed policy checks.' });
   const byPkg = groupBy(findings, (f) => f.packageName);

@@ -5,7 +5,26 @@
 
 Policy‑first dependency and TypeScript hygiene for monorepos — with reasons. Every finding explains why the rule applies, so reviews stay focused and predictable. 🚥
 
-## What & Why
+## Table of Contents 🧭
+
+- [What, Why & How 💡](#what-why--how-)
+- [Install 📦](#install-)
+- [Getting Started 🛣️](#getting-started-)
+- [Basic Usage 🖥️](#basic-usage-)
+- [Advanced Usage 💪](#advanced-usage-)
+- [Policy Configuration 🛠️](#policy-configuration-)
+- [Git Integration: pre‑commit / pre‑push 🐙](#git-integration-precommit--prepush-)
+- [CI Integration 🛡️](#ci-integration-)
+- [Examples 📁](#examples-)
+- [What It Checks 🔍](#what-it-checks-)
+- [Programmatic API 🧩](#programmatic-api-)
+- [Best Practices ✅](#best-practices-)
+- [Troubleshooting 🆘](#troubleshooting-)
+- [FAQ ❓](#faq-)
+- [Author ✍️](#author-)
+- [License 📄](#license-)
+
+## What, Why & How 💡
 
 - What it is: A lightweight, policy‑driven guardrail for repository‑wide dependency boundaries. It detects boundary crossings and can fail CI. Typical use: enforce public‑API‑only imports, keep UI/domain layers separate, align peerDependencies with bundler externals, keep tsconfig sane, and govern skipLibCheck — always with an explicit “Because: …”.
 - Problems it solves: deep import leaks, accidental cross‑package coupling in monorepos, type/exports drift that breaks publishing, peer vs bundler external mismatches, JSX option inconsistencies, and more.
@@ -15,7 +34,7 @@ Policy‑first dependency and TypeScript hygiene for monorepos — with reasons.
   - [syncpack](https://github.com/JamieMason/syncpack): keeps versions and workspace ranges tidy in package.json. Use syncpack for manifest hygiene; use dep‑fence for runtime/build‑time import and peer/bundler alignment.
   - [publint](https://publint.dev): validates the shape of published packages. publint protects consumers; dep‑fence keeps your source respecting boundaries before you publish.
 
-## Why dep‑fence? ✨
+### Why dep‑fence? ✨
 - Condition‑driven rules (e.g., apply only to packages that are UI + publishable).
 - Prevent double‑bundling by aligning tsup `external` with `peerDependencies`. 📦➕📦❌
 - Govern `skipLibCheck` with explicit reasons or an allow‑list. ⚖️
@@ -25,6 +44,17 @@ Policy‑first dependency and TypeScript hygiene for monorepos — with reasons.
 > This complements existing tools — use with [dependency‑cruiser](https://github.com/sverweij/dependency-cruiser) / [ESLint](https://eslint.org) / [syncpack](https://github.com/JamieMason/syncpack) / [publint](https://publint.dev).
 
 
+### How it works? 🧭
+
+- Detects repo root via `pnpm-workspace.yaml` or nearest `package.json`.
+- Scans package directories:
+    - `packages/*/**/package.json`
+    - `app/package.json` (if present)
+- Infers attributes: `ui`, `publishable/private`, `usesTsup`, `hasTsx`, `browser/node`, `worker`, `next`, `storybook`, `app`.
+- Derives `tsup.external` from repo `tsup.base.config.*` and per‑package `tsup.config.*` when available.
+
+
+---
 ## Install 📦
 
 Local (recommended):
@@ -43,27 +73,62 @@ npm i -g dep-fence
 
 Requirement: Node.js >= 18
 
-## CLI Usage 🖥️
+---
+## Getting Started 🛣️
+### CLI Usage
 
 ```bash
-dep-fence            # pretty report
-dep-fence --json     # JSON output
-dep-fence --strict   # exit 1 if any ERROR
-dep-fence --config path/to/dep-fence.config.ts  # explicit policy file (TS/JS supported)
+dep-fence                    # YAML output (default)
+dep-fence --format pretty    # human‑readable (pretty)
+dep-fence --format yaml      # YAML explicitly
+dep-fence -f yaml -g severity  # group by ERROR/WARN/INFO
+dep-fence -f json            # JSON output
+dep-fence --strict           # exit 1 if any ERROR
+dep-fence -c path/to/dep-fence.config.ts  # explicit policy file (TS/JS supported)
+dep-fence -h                 # help
+dep-fence -v                 # version
 ```
 
-Example (gate in CI):
+### Output Formats
 
-```jsonc
-// package.json
-{
-  "scripts": {
-    "dep-fence": "dep-fence --strict"
-  }
-}
+- Default: YAML grouped by package (equivalent to `--format yaml --group-by package`).
+- Pretty: `--format pretty` for human‑readable, package‑grouped output.
+- JSON: `--format json` for machine‑readable output.
+- YAML grouping: `--group-by <package|rule|severity>` only affects YAML.
+  - Examples:
+    - `dep-fence --format yaml --group-by rule`
+    - `dep-fence --format yaml --group-by severity`
+
+Short flags: `-f` = `--format`, `-g` = `--group-by`, `-c` = `--config`.
+
+Note: the legacy `--json` flag was removed; use `--format json`.
+
+
+### Commands and expected output:
+
+```bash
+pnpm dep-fence
+pnpm dep-fence --strict  # CI gate (exit 1 on ERROR)
 ```
 
-Human‑readable output:
+Success Output
+```
+✔ No violations (0)
+```
+
+Violation Output in YAML format (default):
+
+```yaml
+"@your/ui-button":
+  - type: ui-in-deps
+    severity: ERROR
+    message: |
+      UI libs should be peerDependencies (not dependencies):
+      - react
+    reason: UI packages should not bundle React/MUI; rely on host peers.
+```
+
+Violation Output in pretty format (with `--format pretty` option):
 
 ```
 === @your/ui-button ===
@@ -72,66 +137,10 @@ ERROR ui-in-deps: UI libs should be peerDependencies (not dependencies):
 Because: UI packages should not bundle React/MUI; rely on host peers.
 ```
 
-JSON:
 
-```bash
-dep-fence --json | jq
-```
+### Zero‑Config Mode 🚀
 
-Exit code: only with `--strict`, returns 1 when any ERROR exists.
-
-## Guards (pre‑commit / pre‑push) 🔒
-
-In addition to package policies, dep‑fence ships lightweight repository‑level guards under the `dep-fense/guards` entry. They are designed for Git hooks (predictable, no hidden state):
-
-- `allowed-dirs` — Commit scope guard: staged files must be under allowed globs.
-- `mtime-compare` — Advisory: detect files newer than your rules/SSOT baseline.
-- `upstream-conflict` — Optimistic conflict detection: fail if upstream has other‑author changes touching protected paths since your base.
-
-New guards for monorepo publishing/build hygiene:
-- `pkg-exports-exist` — Verify package.json main/module/exports paths point to existing files (prevents publish/bundler breakage).
-- `pkg-ui-peers` — Enforce UI singletons as peers and align bundler externals (flags: ui-in-deps, ui-missing-peer, peer-in-external, external-in-deps).
-- `tsconfig-hygiene` — Keep tsconfig healthy (extends repo base, jsx option sanity, skipLibCheck governance with allowlist/justification).
-
-Try the examples:
-
-```bash
-pnpm dlx tsx examples/guards/run.ts --mode pre-commit
-pnpm dlx tsx examples/guards/run.ts --mode pre-push
-```
-
-Copy `examples/guards/guards.config.ts` into your repo (e.g. `.mrtask/dep-fense.guards.ts`) and point hooks to a small runner (see the example `run.ts`).
-
-Example configurations for the new guards are available:
-
-```bash
-pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
-  --config examples/guards/guards.ui-peers.config.ts
-
-pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
-  --config examples/guards/guards.pkg-exports.config.ts
-
-pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
-  --config examples/guards/guards.tsconfig-hygiene.config.ts
-```
-
-Or import the rules directly:
-
-```ts
-import { pkgUiPeersRule, pkgExportsExistRule, tsconfigHygieneRule } from 'dep-fence/guards';
-
-export default [
-  pkgUiPeersRule({ exclude: ['@your/app'] }),
-  pkgExportsExistRule({ roots: ['packages', 'app'] }),
-  tsconfigHygieneRule({
-    skipLibCheck: { allowedPackages: ['@your/temp-exception'], requireReasonField: true, action: 'warn' },
-  }),
-];
-```
-
-## Zero‑Config Mode 🚀
-
-You can run dep‑fence with zero configuration in a typical monorepo:
+Zero‑Config Mode runs the default package policies (package‑level checks) in a typical monorepo:
 
 - Auto‑detects repo root via nearest `pnpm-workspace.yaml` or `package.json`.
 - Scans packages under `packages/*/**/package.json` and `app/package.json` (if present).
@@ -145,117 +154,31 @@ Why this matters (concrete benefits):
 - Incremental rollout: start as a linter, then codify exceptions as you learn.
 - Reviewer‑friendly: every finding says “Because: …” to explain the policy.
 
-## Quick Start 🚀
+---
 
-### TS (typed, recommended) and MJS (zero‑setup)
+## Basic Usage 🖥️
 
-After adding a minimal config, run `pnpm dep-fence`. TS first, then MJS.
-
-TS: `dep-fence.config.ts`
-
-```ts
-import { defaultPolicies } from 'dep-fence';
-import type { Policy } from 'dep-fence/types';
-
-const custom: Policy[] = [
-  { id: 'ban-deep-imports', when: () => true, because: 'Use public API only; avoid cross‑package internals.', rules: [
-    { rule: 'import-path-ban', options: { forbid: ['^@[^/]+/[^/]+/src/'] }, severity: 'ERROR' },
-  ]},
-];
-
-export const policies: Policy[] = [...defaultPolicies, ...custom];
-```
-
-MJS: `dep-fence.config.mjs`
-
-```mjs
-import { defaultPolicies } from 'dep-fence';
-/** @type {import('dep-fence/types').Policy[]} */
-export const policies = [
-  ...defaultPolicies,
-  { id: 'ban-deep-imports', when: () => true, because: 'Use public API only; avoid cross‑package internals.', rules: [
-    { rule: 'import-path-ban', options: { forbid: ['^@[^/]+/[^/]+/src/'] }, severity: 'ERROR' },
-  ]},
-];
-```
-
-Commands and expected output:
+### Save a report for review (grouped by severity)
 
 ```bash
-pnpm dep-fence
-pnpm dep-fence --strict  # CI gate (exit 1 on ERROR)
+dep-fence -f yaml -g severity > dep-fence.report.yaml
 ```
 
-Success: `✔ No violations (0)`
+This helps leads/owners scan ERRORs vs WARNs separately and share the file in reviews.
 
-Violation (example):
+### Extract error summaries in CI logs (JSON → jq)
 
-```
-=== @your/ui-button ===
-ERROR ui-in-deps: UI libs should be peerDependencies (not dependencies):
-- react
-Because: UI packages should not bundle React/MUI; rely on host peers.
+```bash
+dep-fence -f json | jq -r '.findings[] | select(.severity=="ERROR") | "[\(.severity)] \(.packageName) :: \(.rule)"'
 ```
 
-## Representative Policy Examples (Purpose / Snippet / Outcome)
+This prints concise error lines like: `[ERROR] @your/ui-button :: ui-in-deps`.
 
-- Public API only (ban deep imports across packages)
-  - Purpose: `@org/foo` is OK; `@org/foo/src/x` is not.
-  - Snippet:
-    ```ts
-    { id: 'public-api-only', when: () => true, because: 'Only use package public entrypoints.', rules: [
-      { rule: 'import-path-ban', options: { forbid: ['^@[^/]+/[^/]+/src/'] }, severity: 'ERROR' },
-    ]}
-    ```
-  - Outcome: Detects cross‑package references into `src/`.
 
-- Peers × tsup externals alignment
-  - Purpose: ensure peers are treated as externals by the bundler.
-  - Snippet:
-    ```ts
-    { id: 'tsup-peer-hygiene', when: isPublishable(), because: "Don't bundle peers.", rules: ['peer-in-external','external-in-deps'] }
-    ```
-  - Outcome: Flags peers missing in `tsup.external` or duplicated in `dependencies`.
+---
+## Advanced Usage 💪
 
-- Enforce types from dist
-  - Purpose: published types should come from `dist/*.d.ts`.
-  - Snippet:
-    ```ts
-    { id: 'package-types-dist', when: isPublishable(), because: 'Expose types from dist/*.d.ts.', rules: ['package-types-dist'] }
-    ```
-  - Outcome: Violates when `types` or `exports[entry].types` do not point to `dist/*.d.ts`.
-
-## What It Detects (Conceptual Summary)
-
-- Terms: Policy (target selection + Because + rules), Rule (individual check), Finding (INFO/WARN/ERROR).
-- Flow: infer package attributes → choose applicable policies → run rules → emit findings with Because.
-
-## Best Practices
-
-- Start with “ban deep imports” and “peers × bundler external alignment”.
-- Keep exceptions justified with Because; introduce via `severityOverride` (WARN → ERROR) for gradual rollout.
-- Use `--strict` in CI; run without it locally for discovery.
-
-## Advanced Settings
-
-### Config format choice (TS or MJS)
-
-- Supported: `dep-fence.config.ts`, `dep-fence.config.mjs` (ESM `.mjs` preferred over `.js`).
-- Recommendation: prefer `.mjs` for zero‑setup CI/offline; prefer `.ts` for editor type‑safety.
-- Running `.ts` configs:
-  1) Built‑in fallback (no extra deps): strips type‑only syntax and evaluates at runtime.
-  2) Loader (e.g., `tsx`): `NODE_OPTIONS="--loader tsx" pnpm dep-fence`.
-  3) Prebuild (e.g., `tsup`): `tsup dep-fence.config.ts --format esm --dts false --out-dir .`.
-- Pitfalls: require Node ≥ 18 with ESM, avoid mixing CJS/ESM, minimize runtime deps in air‑gapped CI.
-
-### Performance and caching
-- Prefer fewer, broader rules to many tiny ones.
-- In CI, scope checks to changed packages where possible.
-
-### Workspace/subtree overrides
-- Typical setup is a single root config; split into modules or swap via `DEP_FENCE_CONFIG` for subtrees/teams if needed.
-
-## Advanced Policy Configuration 🛠️
+## Policy Configuration 🛠️
 
 Zero‑config works out of the box. When you need more control, provide an explicit policy file (`dep-fence.config.ts` or `dep-fence.config.mjs`) at the repo root to replace the defaults.
 
@@ -275,7 +198,6 @@ export const policies: Policy[] = [
   }
 ];
 ```
-
 You can also tweak severity per rule via `severityOverride` and compose complex conditions with `all(...)`, `any(...)`, and `not(...)`. Helpers like `isUI()`, `isPublishable()`, and `usesTsup()` are available from `dep-fence/conditions`.
 
 Repo‑wide operational settings (JSON) can be declared in `dep-fence.config.json`:
@@ -300,10 +222,191 @@ Per‑package justification for `skipLibCheck` can live in each `tsconfig.json`:
 }
 ```
 
-Environment variables:
+### Policies by Example
+
+Representative Policy Examples (Purpose / Snippet / Outcome)
+
+- Public API only (ban deep imports across packages)
+    - Purpose: `@org/foo` is OK; `@org/foo/src/x` is not.
+    - Snippet:
+      ```ts
+      { id: 'public-api-only', when: () => true, because: 'Only use package public entrypoints.', rules: [
+        { rule: 'import-path-ban', options: { forbid: ['^@[^/]+/[^/]+/src/'] }, severity: 'ERROR' },
+      ]}
+      ```
+    - Outcome: Detects cross‑package references into `src/`.
+
+- Peers × tsup externals alignment
+    - Purpose: ensure peers are treated as externals by the bundler.
+    - Snippet:
+      ```ts
+      { id: 'tsup-peer-hygiene', when: isPublishable(), because: "Don't bundle peers.", rules: ['peer-in-external','external-in-deps'] }
+      ```
+    - Outcome: Flags peers missing in `tsup.external` or duplicated in `dependencies`.
+
+- Enforce types from dist
+    - Purpose: published types should come from `dist/*.d.ts`.
+    - Snippet:
+      ```ts
+      { id: 'package-types-dist', when: isPublishable(), because: 'Expose types from dist/*.d.ts.', rules: ['package-types-dist'] }
+      ```
+    - Outcome: Violates when `types` or `exports[entry].types` do not point to `dist/*.d.ts`.
+
+
+### Select Pre-Defined Config Files
+
+You can import pre-defined config files in the exmaple directory with `--config` option as you needed.
+Plsease consult `examples/policies/` directory of this repository for more details.
+
+### Create Your Original Config Files
+
+You can create your own config files to customize the rules and settings.
+
+Simple example 1:
+```ts
+import type { Policy } from 'dep-fence/types';
+import { defaultPolicies } from 'dep-fence';
+import { pkgUiPeersRule, pkgExportsExistRule, tsconfigHygieneRule } from 'dep-fence/guards';
+
+const custon: Policy[] = [
+  pkgUiPeersRule({ exclude: ['@your/app'] }),
+  pkgExportsExistRule({ roots: ['packages', 'app'] }),
+  tsconfigHygieneRule({
+    skipLibCheck: { allowedPackages: ['@your/temp-exception'], requireReasonField: true, action: 'warn' },
+  }),
+];
+
+const policies: Policy[] = [...defaultPolicies, ...custom];
+export default policies;
+```
+
+Simple example 2:
+```ts
+import type { Policy } from 'dep-fence/types';
+
+export const policies: Policy[] = [
+  {
+    id: 'my-custom-checks',
+    when: isPublishable(),
+    because: 'repo‑specific validation',
+    rules: [{
+      rule: 'custom',
+      id: 'check-pkg-field',
+      run: (ctx) => {
+        const f = [] as any[];
+        if (!ctx.pkgJson.customField) {
+          f.push({ packageName: ctx.pkgName, packageDir: ctx.pkgDir, rule: 'check-pkg-field', severity: 'WARN', message: 'missing customField', because: ctx.because });
+        }
+        return f;
+      }
+    }]
+  }
+];
+```
+
+
+### Create Your Own Policies from Scratch with TS (typed, recommended) or MJS (zero‑setup)
+
+Config format choice (TS or MJS)
+
+- Supported: `dep-fence.config.ts`, `dep-fence.config.mjs` (ESM `.mjs` preferred over `.js`).
+- Recommendation: prefer `.mjs` for zero‑setup CI/offline; prefer `.ts` for editor type‑safety.
+- Running `.ts` configs:
+    1) Built‑in fallback (no extra deps): strips type‑only syntax and evaluates at runtime.
+    2) Loader (e.g., `tsx`): `NODE_OPTIONS="--loader tsx" pnpm dep-fence`.
+    3) Prebuild (e.g., `tsup`): `tsup dep-fence.config.ts --format esm --dts false --out-dir .`.
+- Pitfalls: require Node ≥ 18 with ESM, avoid mixing CJS/ESM, minimize runtime deps in air‑gapped CI.
+
+TS: `dep-fence.config.ts`
+
+```ts
+import { defaultPolicies } from 'dep-fence';
+import type { Policy } from 'dep-fence/types';
+
+const custom: Policy[] = [
+  { id: 'ban-deep-imports', when: () => true, because: 'Use public API only; avoid cross‑package internals.', rules: [
+    { rule: 'import-path-ban', options: { forbid: ['^@[^/]+/[^/]+/src/'] }, severity: 'ERROR' },
+  ]},
+];
+
+export const policies: Policy[] = [...defaultPolicies, ...custom];
+```
+
+MJS: `dep-fence.config.mjs`
+
+```js
+import { defaultPolicies } from 'dep-fence';
+/** @type {import('dep-fence/types').Policy[]} */
+export const policies = [
+  ...defaultPolicies,
+  { id: 'ban-deep-imports', when: () => true, because: 'Use public API only; avoid cross‑package internals.', rules: [
+    { rule: 'import-path-ban', options: { forbid: ['^@[^/]+/[^/]+/src/'] }, severity: 'ERROR' },
+  ]},
+];
+```
+
+
+
+### Environment variables:
 - `DEP_FENCE_CONFIG` — absolute/relative path to a policies module (overrides file discovery).
 - `DEP_FENCE_REPO_CONFIG` — path to a JSON file with repo‑wide settings (overrides `dep-fence.config.json`).
 
+### Workspace/subtree overrides
+- Typical setup is a single root config; split into modules or swap via `DEP_FENCE_CONFIG` for subtrees/teams if needed.
+
+### Performance and caching
+- Prefer fewer, broader rules to many tiny ones.
+- In CI, scope checks to changed packages where possible.
+
+
+
+---
+## Git Integration: pre‑commit / pre‑push 🐙
+
+Alongside package policies (see Zero‑Config Mode), dep‑fence ships lightweight repository‑level guards under the `dep-fence/guards` entry. They are designed for Git hooks (predictable, no hidden state):
+
+- `allowed-dirs` — Commit scope guard: staged files must be under allowed globs.
+- `mtime-compare` — Advisory: detect files newer than your rules/SSOT baseline.
+- `upstream-conflict` — Optimistic conflict detection: fail if upstream has other‑author changes touching protected paths since your base.
+
+New guards for monorepo publishing/build hygiene:
+- `pkg-exports-exist` — Verify package.json main/module/exports paths point to existing files (prevents publish/bundler breakage).
+- `pkg-ui-peers` — Enforce UI singletons as peers and align bundler externals (flags: ui-in-deps, ui-missing-peer, peer-in-external, external-in-deps).
+- `tsconfig-hygiene` — Keep tsconfig healthy (extends repo base, jsx option sanity, skipLibCheck governance with allowlist/justification).
+
+Try the examples:
+
+```bash
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit
+pnpm dlx tsx examples/guards/run.ts --mode pre-push
+
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
+  --config examples/guards/guards.ui-peers.config.ts
+
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
+  --config examples/guards/guards.pkg-exports.config.ts
+
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
+  --config examples/guards/guards.tsconfig-hygiene.config.ts
+```
+
+---
+## CI Integration 🛡️
+
+```yaml
+# GitHub Actions example
+jobs:
+  dep-fence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: pnpm i --frozen-lockfile
+      - run: pnpm dep-fence  # refer to your package.json script
+```
+
+---
 ## Examples 📁
 
 The [`examples/`](./examples/) directory contains copy‑pasteable configurations, each with inline OK/NG guidance explaining why they pass/fail:
@@ -347,27 +450,8 @@ DEP_FENCE_CONFIG=examples/policies/multi-entry-workers/dep-fence.config.ts pnpm 
 DEP_FENCE_REPO_CONFIG=examples/repo-config/dep-fence.config.json pnpm dep-fence
 ```
 
-## Troubleshooting
-
-- False positives with path aliases: align dep‑fence’s resolver with your tsconfig `paths`/bundler aliases.
-- Type‑only imports flagged: adjust rule targets/conditions or use rules that account for types‑only edges.
-- Dynamic imports: dynamic/computed paths are treated conservatively; model critical boundaries with static paths.
-
-## FAQ
-
-- [ESLint](https://eslint.org) or dep‑fence?
-  - Both. ESLint covers in‑file quality; dep‑fence enforces cross‑file/package boundaries.
-
-- Why not just [dependency‑cruiser](https://github.com/sverweij/dependency-cruiser)?
-  - It’s great for exploration/visualization. dep‑fence focuses on CI‑first, opinionated defaults for monorepos with a small set of high‑signal rules.
-- How do we roll it out gradually?
-  - Start with WARN and one or two forbid rules; raise to ERROR once violations are addressed.
-- How to allow a temporary exception?
-  - Use a narrowly scoped policy/condition or `severityOverride`, and record a Because reason.
-- How to protect publish quality?
-  - Pair dep‑fence (boundaries/types path/peer×bundler) with [publint](https://publint.dev) (package export surface) in CI.
-
-## What it checks 🔍
+---
+## What It Checks 🔍
 
 - Peers × tsup externals
   - `peer-in-external` (peer missing from `tsup.external`)
@@ -423,41 +507,6 @@ Additional rules and helpers can be enabled via a policy file:
 - `package-exports-guard` — guard subpaths (e.g., forbid `types` for `./workers/*`).
 - `package-types-dist` — ensure package `types` and `exports[entry].types` point to `dist/*.d.ts`.
 
-### Advanced: Custom Runtime Rules 🧩
-
-You can register custom runtime checks directly in a policy (see example below). For configuration format and loader choices, see “Advanced Settings”.
-
-```ts
-import type { Policy } from 'dep-fence/types';
-
-export const policies: Policy[] = [
-  {
-    id: 'my-custom-checks',
-    when: isPublishable(),
-    because: 'repo‑specific validation',
-    rules: [{
-      rule: 'custom',
-      id: 'check-pkg-field',
-      run: (ctx) => {
-        const f = [] as any[];
-        if (!ctx.pkgJson.customField) {
-          f.push({ packageName: ctx.pkgName, packageDir: ctx.pkgDir, rule: 'check-pkg-field', severity: 'WARN', message: 'missing customField', because: ctx.because });
-        }
-        return f;
-      }
-    }]
-  }
-];
-```
-
-## How it works 🧭
-
-- Detects repo root via `pnpm-workspace.yaml` or nearest `package.json`.
-- Scans package directories:
-  - `packages/*/**/package.json`
-  - `app/package.json` (if present)
-- Infers attributes: `ui`, `publishable/private`, `usesTsup`, `hasTsx`, `browser/node`, `worker`, `next`, `storybook`, `app`.
-- Derives `tsup.external` from repo `tsup.base.config.*` and per‑package `tsup.config.*` when available.
 
 ## Programmatic API 🧩
 
@@ -471,22 +520,34 @@ const hasError = findings.some((f) => f.severity === 'ERROR');
 
 Types are available from `dep-fence/types` (`Finding`, `Policy`, `Condition`, `Severity`, ...).
 
-## CI Integration 🛡️
 
-```yaml
-# GitHub Actions example
-jobs:
-  dep-fence:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: pnpm i --frozen-lockfile
-      - run: pnpm dep-fence  # refer to your package.json script
-```
+## Best Practices ✅
 
-## Author
+- Start with “ban deep imports” and “peers × bundler external alignment”.
+- Keep exceptions justified with Because; introduce via `severityOverride` (WARN → ERROR) for gradual rollout.
+- Use `--strict` in CI; run without it locally for discovery.
+
+## Troubleshooting 🆘
+
+- False positives with path aliases: align dep‑fence’s resolver with your tsconfig `paths`/bundler aliases.
+- Type‑only imports flagged: adjust rule targets/conditions or use rules that account for types‑only edges.
+- Dynamic imports: dynamic/computed paths are treated conservatively; model critical boundaries with static paths.
+
+## FAQ ❓
+
+- [ESLint](https://eslint.org) or dep‑fence?
+    - Both. ESLint covers in‑file quality; dep‑fence enforces cross‑file/package boundaries.
+
+- Why not just [dependency‑cruiser](https://github.com/sverweij/dependency-cruiser)?
+    - It’s great for exploration/visualization. dep‑fence focuses on CI‑first, opinionated defaults for monorepos with a small set of high‑signal rules.
+- How do we roll it out gradually?
+    - Start with WARN and one or two forbid rules; raise to ERROR once violations are addressed.
+- How to allow a temporary exception?
+    - Use a narrowly scoped policy/condition or `severityOverride`, and record a Because reason.
+- How to protect publish quality?
+    - Pair dep‑fence (boundaries/types path/peer×bundler) with [publint](https://publint.dev) (package export surface) in CI.
+
+## Author ✍️
 
 Hiroya Kubo hiroya@cuc.ac.jp
 
