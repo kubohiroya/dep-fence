@@ -1,0 +1,10 @@
+{
+  "name": "@acme/ui-button",
+  "version": "0.0.0-test",
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

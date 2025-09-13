@@ -1,0 +1,9 @@
+{
+  "name": "@acme/ui-form",
+  "version": "0.0.0-test",
+  "devDependencies": {
+    "react": "^18.2.0"
+  },
+  "dependencies": {},
+  "peerDependencies": {}
+}

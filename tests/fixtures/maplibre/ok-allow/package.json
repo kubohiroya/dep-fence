@@ -1,0 +1,7 @@
+{
+  "name": "@hierarchidb/ui-map",
+  "version": "0.0.0-test",
+  "dependencies": {
+    "maplibre-gl": "^4.0.0"
+  }
+}

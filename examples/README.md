@@ -1,67 +1,94 @@
-# dep-fence Examples
+# dep-fence Examples (official)
 
-This folder contains sample configurations you can copy into your repo.
+This directory hosts stack/recipe oriented examples for typical monorepos.
 
-- policies/minimal/dep-fence.config.ts — a small, readable policy set (OK/NG inline guidance)
-- policies/strict-ui/dep-fence.config.ts — stricter UI rules + severity overrides (OK/NG)
-- policies/source-import-ban/dep-fence.config.ts — ban specific named imports (OK/NG)
-- policies/tsconfig-paths/dep-fence.config.ts — enforce paths to dist/*.d.ts; forbid ../src (OK/NG)
-- policies/package-exports-guard/dep-fence.config.ts — guard worker subpaths from exposing types (OK/NG)
-- policies/package-types-dist/dep-fence.config.ts — require types for entries to point to dist/*.d.ts (OK/NG)
-- policies/multi-entry-workers/dep-fence.config.ts — combined example for multi‑entry + workers (OK/NG)
-- policies/custom-rule/dep-fence.config.ts — minimal custom runtime rule (OK/NG)
-- policies/publishable-tsconfig-hygiene/dep-fence.config.ts — require base tsconfig + forbid ../src (OK/NG)
-- policies/publishable-local-shims/dep-fence.config.ts — discourage long‑lived local *.d.ts shims (OK/NG)
-- policies/jsx-option-for-tsx/dep-fence.config.ts — enforce jsx: react-jsx for TSX (OK/NG)
-- policies/skiplibcheck-governance/dep-fence.config.ts — govern skipLibCheck usage (OK/NG)
-- policies/non-ui-paths-hygiene/dep-fence.config.ts — discourage ../src across the board (OK/NG)
-- policies/maplibre-encapsulation/dep-fence.config.ts — isolate MapLibre deps to a wrapper pkg (OK/NG)
-- guards/guards.config.ts — example guard rules (allowed-dirs, mtime-compare, upstream-conflict)
-  - guards/guards.ui-peers.config.ts — enforce UI libs as peers and align bundler externals
-  - guards/guards.pkg-exports.config.ts — verify package exports paths exist
-  - guards/guards.tsconfig-hygiene.config.ts — tsconfig baseline/JSX/skipLibCheck governance
-- repo-config/dep-fence.config.json — repo‑wide operational settings
-- tsconfig/tsconfig.allow-skiplibcheck.json — per‑package skipLibCheck with rationale
-- tsup/tsup.base.config.ts — example of declaring externals shared across packages
+## Layout
+- `examples/common/` — stack‑agnostic policies/templates
+- `examples/stacks/` — stack/versions (React, Router v7, TS v5, bundlers, MapLibre)
+- `examples/recipes/` — ready‑to‑run combinations
+- `examples/_shared/` — shared fixtures
 
-Quick trial using environment variables:
+## Bundlers: Vite/Webpack recipes
+- Vite
+  - `examples/stacks/bundlers/vite/recipes/package-exports-guard/dep-fence.config.ts`
+  - `examples/stacks/bundlers/vite/recipes/multi-entry-workers/dep-fence.config.ts`
+- Webpack
+  - `examples/stacks/bundlers/webpack/recipes/package-exports-guard/dep-fence.config.ts`
+  - `examples/stacks/bundlers/webpack/recipes/multi-entry-workers/dep-fence.config.ts`
+  - Generic alias: `examples/recipes/package-exports-guard/dep-fence.config.ts`
+
+## New policies & recipes
+- React base
+  - `examples/stacks/react/base/policies/ui-peers-light/dep-fence.config.ts`
+  - `examples/stacks/react/base/policies/ui-peer-policy/dep-fence.config.ts`
+  - `examples/stacks/react/base/policies/minimal/dep-fence.config.ts`
+  - Recipes: `examples/recipes/ui-peers-light/dep-fence.config.ts`, `examples/recipes/minimal/dep-fence.config.ts`
+- React Router v7
+  - `examples/stacks/react/router-v7/policies/minimal/dep-fence.config.ts`
+  - `examples/stacks/react/router-v7/policies/apps-only/dep-fence.config.ts`
+  - Recipes: `examples/recipes/router-v7-minimal/dep-fence.config.ts`, `examples/recipes/router-v7-apps-only/dep-fence.config.ts`
+- TypeScript v5
+  - `examples/stacks/typescript/v5/tsconfig-paths/dep-fence.config.ts`
+  - `examples/stacks/typescript/v5/non-ui-paths-hygiene/dep-fence.config.ts`
+  - `examples/stacks/typescript/v5/package-types-dist/dep-fence.config.ts`
+  - `examples/stacks/typescript/v5/publishable-local-shims/dep-fence.config.ts`
+  - `examples/stacks/typescript/v5/skiplibcheck-governance/dep-fence.config.ts`
+  - `examples/stacks/typescript/v5/source-import-ban/dep-fence.config.ts`
+  - `examples/stacks/typescript/v5/custom-rule/dep-fence.config.ts`
+  - Recipes: see `examples/recipes/*` counterparts
+- MapLibre
+  - `examples/stacks/maplibre/maplibre-encapsulation/dep-fence.config.ts`
+  - `examples/stacks/maplibre/maplibre-allowlist/dep-fence.config.ts`
+
+## Quick start
 
 ```bash
-# Use a specific policy module (overrides discovery)
-DEP_FENCE_CONFIG=examples/policies/minimal/dep-fence.config.ts pnpm dep-fence
+# Minimal policy set
+DEP_FENCE_CONFIG=examples/recipes/minimal/dep-fence.config.ts pnpm dep-fence
 
-# Use repo‑wide JSON settings explicitly
+# Focused examples
+DEP_FENCE_CONFIG=examples/recipes/tsconfig-paths/dep-fence.config.ts pnpm dep-fence
+DEP_FENCE_CONFIG=examples/recipes/package-exports-guard/dep-fence.config.ts pnpm dep-fence
+DEP_FENCE_CONFIG=examples/stacks/bundlers/vite/recipes/multi-entry-workers/dep-fence.config.ts pnpm dep-fence
+DEP_FENCE_CONFIG=examples/recipes/maplibre-allowlist/dep-fence.config.ts pnpm dep-fence
+
+# Repo‑wide JSON settings
 DEP_FENCE_REPO_CONFIG=examples/repo-config/dep-fence.config.json pnpm dep-fence
 
-# Try focused examples:
-# Public API only (ban specific imports)
-DEP_FENCE_CONFIG=examples/policies/source-import-ban/dep-fence.config.ts pnpm dep-fence
-
-# Path hygiene (dist declarations only)
-DEP_FENCE_CONFIG=examples/policies/tsconfig-paths/dep-fence.config.ts pnpm dep-fence
-
-# Worker subpaths JS-only
-DEP_FENCE_CONFIG=examples/policies/package-exports-guard/dep-fence.config.ts pnpm dep-fence
-
-# Multi-entry + workers combined
-DEP_FENCE_CONFIG=examples/policies/multi-entry-workers/dep-fence.config.ts pnpm dep-fence
-
-# skipLibCheck governance
-DEP_FENCE_CONFIG=examples/policies/skiplibcheck-governance/dep-fence.config.ts pnpm dep-fence
-
-# jsx option for TSX
-DEP_FENCE_CONFIG=examples/policies/jsx-option-for-tsx/dep-fence.config.ts pnpm dep-fence
-
-# Guards (pre-commit / pre-push style)
-# Run with tsx directly (or copy these into your repo hooks)
+# Guards (pre‑commit / pre‑push)
 pnpm dlx tsx examples/guards/run.ts --mode pre-commit
 pnpm dlx tsx examples/guards/run.ts --mode pre-push
 
-# Try specific guard configs
+# Specific guard configs
 pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.ui-peers.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.ui-peer-policy.config.ts
 pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.pkg-exports.config.ts
 pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.tsconfig-hygiene.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.publishable-tsconfig-hygiene.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.jsx-option-for-tsx.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.router-v7-minimal.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.router-v7-apps-only.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.tsconfig-paths.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.maplibre-allowlist.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.package-types-dist.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.strict-ui.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.source-import-ban.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit --config examples/guards/guards.custom-repo-field.config.ts
 ```
 
-Note: dep‑fence scans packages in your workspace (e.g. `packages/*/**/package.json`).
-These examples are meant to be copied into your own repo and adapted to your needs.
+Note: dep‑fence scans packages in your workspace (e.g. `packages/*/**/package.json`). Copy and adapt these examples to your repo.
+
+TS hygiene starter:
+```
+# Keep tsconfig healthy for publishable packages
+DEP_FENCE_CONFIG=examples/recipes/publishable-tsconfig-hygiene/dep-fence.config.ts pnpm dep-fence
+
+# Enforce paths to dist/*.d.ts (avoid ../src references)
+DEP_FENCE_CONFIG=examples/recipes/tsconfig-paths/dep-fence.config.ts pnpm dep-fence
+```
+
+UI policies — quick guide:
+- `ui-peer-policy` (recipe): package.json‑only check; fast to adopt; good first step.
+- `ui-peers-light` (recipe): gentle variant; WARN by default; no bundler checks.
+- `minimal` (stack): adds bundler externals alignment (tsup) on top of peers.
+- `strict-ui` (recipe): strict peers + bundler alignment; suitable for CI gating in libraries.

@@ -1,6 +1,6 @@
 {
   "name": "dep-fence",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "author": "Hiroya Kubo <hiroya@cuc.ac.jp>",
   "description": "Policy-driven dependency guard for monorepos: enforce package boundaries, peerDeps/externals alignment, and TypeScript config hygiene",
   "type": "module",
@@ -27,6 +27,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "test": "pnpm -s build && node tests/run.mjs",
     "prepublishOnly": "pnpm run build",
     "start": "tsx src/cli.ts"
   },

@@ -3,7 +3,9 @@
 [![license](https://img.shields.io/npm/l/dep-fence?style=flat-square)]
 
 
-Policy‑first dependency and TypeScript hygiene for monorepos — with reasons. Every finding explains why the rule applies, so reviews stay focused and predictable. 🚥
+A tool to safeguard package dependencies and TypeScript configuration hygiene in monorepos, based on rich policy examples and explicit reasons.
+Every finding explains why a rule must or should apply, keeping reviews focused and predictable. 
+This helps automate reviews, clarify next steps, and connect findings directly to coding-assistant AI instructions. 🚥
 
 ## Table of Contents 🧭
 
@@ -12,18 +14,19 @@ Policy‑first dependency and TypeScript hygiene for monorepos — with reasons.
 - [Getting Started 🛣️](#getting-started-)
 - [Basic Usage 🖥️](#basic-usage-)
 - [Advanced Usage 💪](#advanced-usage-)
-- [Policy Configuration 🛠️](#policy-configuration-)
-- [Git Integration: pre‑commit / pre‑push 🐙](#git-integration-precommit--prepush-)
-- [CI Integration 🛡️](#ci-integration-)
+  - [Policy Configuration 🛠️](#policy-configuration-)
+  - [Git Integration: pre‑commit / pre‑push 🐙](#git-integration-precommit--prepush-)
+  - [CI Integration 🛡️](#ci-integration-)
 - [Examples 📁](#examples-)
-- [What It Checks 🔍](#what-it-checks-)
+  - [What It Checks 🔍](#what-it-checks-)
+  - [Default Policies (catalog) 📚](#default-policies-catalog-)
 - [Programmatic API 🧩](#programmatic-api-)
-- [Best Practices ✅](#best-practices-)
 - [Troubleshooting 🆘](#troubleshooting-)
 - [FAQ ❓](#faq-)
 - [Author ✍️](#author-)
 - [License 📄](#license-)
 
+---
 ## What, Why & How 💡
 
 - What it is: A lightweight, policy‑driven guardrail for repository‑wide dependency boundaries. It detects boundary crossings and can fail CI. Typical use: enforce public‑API‑only imports, keep UI/domain layers separate, align peerDependencies with bundler externals, keep tsconfig sane, and govern skipLibCheck — always with an explicit “Because: …”.
@@ -178,7 +181,7 @@ This prints concise error lines like: `[ERROR] @your/ui-button :: ui-in-deps`.
 ---
 ## Advanced Usage 💪
 
-## Policy Configuration 🛠️
+### Policy Configuration 🛠️
 
 Zero‑config works out of the box. When you need more control, provide an explicit policy file (`dep-fence.config.ts` or `dep-fence.config.mjs`) at the repo root to replace the defaults.
 
@@ -222,7 +225,7 @@ Per‑package justification for `skipLibCheck` can live in each `tsconfig.json`:
 }
 ```
 
-### Policies by Example
+#### Policies by Example
 
 Representative Policy Examples (Purpose / Snippet / Outcome)
 
@@ -253,12 +256,12 @@ Representative Policy Examples (Purpose / Snippet / Outcome)
     - Outcome: Violates when `types` or `exports[entry].types` do not point to `dist/*.d.ts`.
 
 
-### Select Pre-Defined Config Files
+#### Select Pre-Defined Config Files
 
-You can import pre-defined config files in the exmaple directory with `--config` option as you needed.
-Plsease consult `examples/policies/` directory of this repository for more details.
+You can import pre-defined config files in the examples directory with `--config` option as needed.
+Please consult `examples/README.md` for stacks/recipes oriented examples (React, Router v7, TypeScript v5, Bundlers). Legacy `examples/policies/` paths have been retired; use the stacks/recipes paths.
 
-### Create Your Original Config Files
+#### Create Your Original Config Files
 
 You can create your own config files to customize the rules and settings.
 
@@ -305,7 +308,7 @@ export const policies: Policy[] = [
 ```
 
 
-### Create Your Own Policies from Scratch with TS (typed, recommended) or MJS (zero‑setup)
+#### Create Your Own Policies from Scratch with TS (typed, recommended) or MJS (zero‑setup)
 
 Config format choice (TS or MJS)
 
@@ -347,21 +350,20 @@ export const policies = [
 
 
 
-### Environment variables:
+#### Environment variables:
 - `DEP_FENCE_CONFIG` — absolute/relative path to a policies module (overrides file discovery).
 - `DEP_FENCE_REPO_CONFIG` — path to a JSON file with repo‑wide settings (overrides `dep-fence.config.json`).
 
-### Workspace/subtree overrides
+#### Workspace/subtree overrides
 - Typical setup is a single root config; split into modules or swap via `DEP_FENCE_CONFIG` for subtrees/teams if needed.
 
-### Performance and caching
+#### Performance and caching
 - Prefer fewer, broader rules to many tiny ones.
 - In CI, scope checks to changed packages where possible.
 
 
 
----
-## Git Integration: pre‑commit / pre‑push 🐙
+### Git Integration: pre‑commit / pre‑push 🐙
 
 Alongside package policies (see Zero‑Config Mode), dep‑fence ships lightweight repository‑level guards under the `dep-fence/guards` entry. They are designed for Git hooks (predictable, no hidden state):
 
@@ -388,10 +390,27 @@ pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
 
 pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
   --config examples/guards/guards.tsconfig-hygiene.config.ts
+
+# Additional guard presets (pair with recipes)
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
+  --config examples/guards/guards.ui-peer-policy.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
+  --config examples/guards/guards.publishable-tsconfig-hygiene.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
+  --config examples/guards/guards.jsx-option-for-tsx.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
+  --config examples/guards/guards.tsconfig-paths.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
+  --config examples/guards/guards.maplibre-allowlist.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
+  --config examples/guards/guards.package-types-dist.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
+  --config examples/guards/guards.strict-ui.config.ts
+pnpm dlx tsx examples/guards/run.ts --mode pre-commit \
+  --config examples/guards/guards.source-import-ban.config.ts
 ```
 
----
-## CI Integration 🛡️
+### CI Integration 🛡️
 
 ```yaml
 # GitHub Actions example
@@ -407,51 +426,47 @@ jobs:
 ```
 
 ---
+## Concepts & Terminology 📚
+
+- Rule
+  - Smallest, atomic check that produces findings (e.g., `peer-in-external`, `source-import-ban`).
+  - Takes per‑rule `options` and a computed severity; may be built‑in or a plugin (via `create(options)=>check(ctx)`).
+- Policy
+  - A composable unit that targets a package set and explains intent.
+  - Shape: `{ id, when, because, rules, options?, severityOverride? }` — evaluated per package.
+  - Example: “UI externals and peers” bundles `ui-peer-policy` rule + `peer-in-external` rule for publishable UI packages.
+- Recipe
+  - A ready‑to‑run policy module focused on one goal; copy‑pasteable.
+  - Lives under `examples/recipes/…/dep-fence.config.ts` and is referenced via `DEP_FENCE_CONFIG=…`.
+- Guard
+  - A repository‑level check for Git hooks/CI (pre‑commit/pre‑push). Runs via `examples/guards/run.ts`.
+  - Guards read workspace state (staged files, tsconfig, package.json) and fail fast outside policy evaluation.
+
+---
 ## Examples 📁
 
-The [`examples/`](./examples/) directory contains copy‑pasteable configurations, each with inline OK/NG guidance explaining why they pass/fail:
-
-
-- Minimal and strict UI
-  - `examples/policies/minimal/dep-fence.config.ts` — small, readable defaults.
-  - `examples/policies/strict-ui/dep-fence.config.ts` — stricter UI rules with severity overrides.
-- Focused policies
-  - `examples/policies/source-import-ban/dep-fence.config.ts` — ban specific named imports.
-  - `examples/policies/tsconfig-paths/dep-fence.config.ts` — enforce dist/*.d.ts; forbid ../src in paths.
-  - `examples/policies/publishable-tsconfig-hygiene/dep-fence.config.ts` — require base tsconfig + forbid ../src.
-  - `examples/policies/publishable-local-shims/dep-fence.config.ts` — discourage long‑lived local *.d.ts shims.
-  - `examples/policies/jsx-option-for-tsx/dep-fence.config.ts` — enforce jsx: react‑jsx for TSX.
-  - `examples/policies/skiplibcheck-governance/dep-fence.config.ts` — govern skipLibCheck usage.
-  - `examples/policies/non-ui-paths-hygiene/dep-fence.config.ts` — discourage ../src across the board.
-  - `examples/policies/maplibre-encapsulation/dep-fence.config.ts` — isolate MapLibre deps to a wrapper.
-- Packaging patterns
-  - `examples/policies/package-exports-guard/dep-fence.config.ts` — keep worker subpaths JS‑only.
-  - `examples/policies/package-types-dist/dep-fence.config.ts` — entries must point types to dist/*.d.ts.
-  - `examples/policies/multi-entry-workers/dep-fence.config.ts` — combined multi‑entry + workers.
-- Extensibility
-  - `examples/policies/custom-rule/dep-fence.config.ts` — minimal custom runtime rule.
-- Repo‑wide settings and toolchain
-  - `examples/repo-config/dep-fence.config.json` — repo‑wide settings (e.g., allowSkipLibCheck).
-  - `examples/tsconfig/tsconfig.allow-skiplibcheck.json` — per‑package rationale for skipLibCheck.
-  - `examples/tsup/tsup.base.config.ts` — central externals list for monorepos.
-
-How to run an example (overrides config discovery):
+See `examples/README.md` for a concise, up‑to‑date index of stacks and recipes. Typical invocations:
 
 ```bash
 # Minimal policy set
-DEP_FENCE_CONFIG=examples/policies/minimal/dep-fence.config.ts pnpm dep-fence
+DEP_FENCE_CONFIG=examples/recipes/minimal/dep-fence.config.ts pnpm dep-fence
 
-# Focused examples
-DEP_FENCE_CONFIG=examples/policies/tsconfig-paths/dep-fence.config.ts pnpm dep-fence
-DEP_FENCE_CONFIG=examples/policies/package-exports-guard/dep-fence.config.ts pnpm dep-fence
-DEP_FENCE_CONFIG=examples/policies/multi-entry-workers/dep-fence.config.ts pnpm dep-fence
+# Focused examples (stacks/recipes paths)
+DEP_FENCE_CONFIG=examples/recipes/tsconfig-paths/dep-fence.config.ts pnpm dep-fence
+DEP_FENCE_CONFIG=examples/recipes/package-exports-guard/dep-fence.config.ts pnpm dep-fence
+DEP_FENCE_CONFIG=examples/stacks/bundlers/vite/recipes/multi-entry-workers/dep-fence.config.ts pnpm dep-fence
 
 # With repo‑wide JSON settings
 DEP_FENCE_REPO_CONFIG=examples/repo-config/dep-fence.config.json pnpm dep-fence
 ```
 
----
-## What It Checks 🔍
+UI policies — quick guide:
+- `ui-peer-policy` (recipe): package.json‑only check; fast to adopt; good first step.
+- `ui-peers-light` (recipe): gentle variant; WARN by default; no bundler checks.
+- `minimal` (stack): adds bundler externals alignment (tsup) on top of peers.
+- `strict-ui` (recipe): strict peers + bundler alignment; suitable for CI gating in libraries.
+
+### What It Checks 🔍
 
 - Peers × tsup externals
   - `peer-in-external` (peer missing from `tsup.external`)
@@ -502,11 +517,12 @@ export const policies = [
 
 Additional rules and helpers can be enabled via a policy file:
 
-- `source-import-ban` — ban specific named imports from a module. See `examples/policies/source-import-ban/dep-fence.config.ts`.
+- `source-import-ban` — ban specific named imports from a module. See `examples/recipes/source-import-ban/dep-fence.config.ts`.
 - `tsconfig-paths` — enforce `paths` to point to `dist/*.d.ts` and/or forbid patterns.
 - `package-exports-guard` — guard subpaths (e.g., forbid `types` for `./workers/*`).
 - `package-types-dist` — ensure package `types` and `exports[entry].types` point to `dist/*.d.ts`.
 
+---
 
 ## Programmatic API 🧩
 
@@ -521,12 +537,6 @@ const hasError = findings.some((f) => f.severity === 'ERROR');
 Types are available from `dep-fence/types` (`Finding`, `Policy`, `Condition`, `Severity`, ...).
 
 
-## Best Practices ✅
-
-- Start with “ban deep imports” and “peers × bundler external alignment”.
-- Keep exceptions justified with Because; introduce via `severityOverride` (WARN → ERROR) for gradual rollout.
-- Use `--strict` in CI; run without it locally for discovery.
-
 ## Troubleshooting 🆘
 
 - False positives with path aliases: align dep‑fence’s resolver with your tsconfig `paths`/bundler aliases.
@@ -535,17 +545,29 @@ Types are available from `dep-fence/types` (`Finding`, `Policy`, `Condition`, `S
 
 ## FAQ ❓
 
-- [ESLint](https://eslint.org) or dep‑fence?
+- **[ESLint](https://eslint.org) or dep‑fence?**
     - Both. ESLint covers in‑file quality; dep‑fence enforces cross‑file/package boundaries.
-
-- Why not just [dependency‑cruiser](https://github.com/sverweij/dependency-cruiser)?
+ 
+- **Why not just [dependency‑cruiser](https://github.com/sverweij/dependency-cruiser)?**
     - It’s great for exploration/visualization. dep‑fence focuses on CI‑first, opinionated defaults for monorepos with a small set of high‑signal rules.
-- How do we roll it out gradually?
-    - Start with WARN and one or two forbid rules; raise to ERROR once violations are addressed.
-- How to allow a temporary exception?
-    - Use a narrowly scoped policy/condition or `severityOverride`, and record a Because reason.
-- How to protect publish quality?
+
+- **What are the best practices for using dep-fence?**
+    - Start with simple, high-impact rules such as banning deep imports and aligning peers with bundler externals.
+    - Keep all exceptions justified with clear “Because:” statements. Use `severityOverride` (e.g., WARN → ERROR) to roll out gradually without blocking early adoption.
+    - In CI, run dep-fence with `--strict` to fail on ERRORs; locally, run without `--strict` to discover and review issues incrementally.
+    - Document exceptions and policies transparently so reviews stay predictable and team members understand why rules apply.
+
+- **How to allow a temporary exception?**
+    - Use a narrowly scoped policy/condition or `severityOverride`, and record a Because statement.
+ 
+- **How to protect publish quality?**
     - Pair dep‑fence (boundaries/types path/peer×bundler) with [publint](https://publint.dev) (package export surface) in CI.
+ 
+- **Where does “unused dependency warning” fit?**
+    - Not shipped by default today. It’s best implemented as a Guard preset (repo‑level, may be slower) or as a plugin Rule if you prefer policy evaluation.
+    - Guard approach (recommended): scan import graph vs package.json to flag unused deps (pair it with pre‑commit). See `depcheck`/build graph tools, or author a custom guard similar to `guards.package-types-dist`.
+    - Policy approach: add a plugin rule `unused-deps` and include it in a policy for publishable packages. This repo already documents plugin rules in `docs/dep-fence-upstream-guide.md`.
+
 
 ## Author ✍️
 

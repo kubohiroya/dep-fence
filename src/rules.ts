@@ -1,16 +1,10 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { create as createUiPeerPolicy } from './rules-plugins/uiPeerPolicy';
+import { create as createMapLibreAllowlist } from './rules-plugins/maplibreAllowlist';
 import { readTsconfig, readTsupExternals } from './loaders';
 import type { Finding, Severity } from './types';
 
-const UI_PEERS = [
-  'react',
-  'react-dom',
-  '@mui/material',
-  '@mui/icons-material',
-  '@emotion/react',
-  '@emotion/styled',
-];
 
 export interface RuleContext {
   pkgName: string;
@@ -41,10 +35,9 @@ export function runRules(ctx: RuleContext): Finding[] {
   const extInDepsNotPeers = [...externals].filter((e) => deps.has(e) && !peers.has(e));
   if (extInDepsNotPeers.length) push(f, ctx, 'external-in-deps', 'WARN', `external also in dependencies (consider peer):\n- ${extInDepsNotPeers.join('\n- ')}`);
 
-  const uiInDeps = UI_PEERS.filter((u) => deps.has(u));
-  if (uiInDeps.length) push(f, ctx, 'ui-in-deps', 'ERROR', `UI libs should be peerDependencies (not dependencies):\n- ${uiInDeps.join('\n- ')}`);
-  const uiMissingPeer = UI_PEERS.filter((u) => (deps.has(u) || devs.has(u)) && !peers.has(u));
-  if (uiMissingPeer.length) push(f, ctx, 'ui-missing-peer', 'WARN', `UI libs installed but missing in peerDependencies:\n- ${uiMissingPeer.join('\n- ')}`);
+  // Delegate UI peer checks to the plugin to avoid duplication.
+  const uiPeerFindings = createUiPeerPolicy()({ ...ctx, pkgJson: ctx.pkgJson } as any);
+  for (const uf of uiPeerFindings) f.push(uf);
 
   const badPaths = Object.entries(paths)
     .flatMap(([k, arr]) => (arr as string[] || []).map((p) => ({ key: k, val: p })))
@@ -88,20 +81,9 @@ export function runRules(ctx: RuleContext): Finding[] {
   const jsxOpt = tsconfig.compilerOptions && tsconfig.compilerOptions.jsx;
   if (hasTsx && jsxOpt !== 'react-jsx') push(f, ctx, 'jsx-mismatch', 'WARN', `tsx files detected but compilerOptions.jsx is '${jsxOpt || '(unset)'}' (recommend 'react-jsx').`);
 
-  // Enforce MapLibre encapsulation: only @hierarchidb/ui-map may depend on maplibre-gl/@vis.gl/react-maplibre
-  const MAPLIBRE_PKGS = new Set(['maplibre-gl', '@vis.gl/react-maplibre']);
-  const allowList = new Set(['@hierarchidb/ui-map']);
-  const hasMapLibreDirect = [...MAPLIBRE_PKGS].some((p) => deps.has(p) || peers.has(p) || devs.has(p));
-  if (hasMapLibreDirect && !allowList.has(ctx.pkgName)) {
-    const offenders = [...MAPLIBRE_PKGS].filter((p) => deps.has(p) || peers.has(p) || devs.has(p));
-    push(
-      f,
-      ctx,
-      'maplibre-direct-dep',
-      'ERROR',
-      `Direct dependency on MapLibre stack is not allowed. Use @hierarchidb/ui-map wrapper instead. Found:\n- ${offenders.join('\n- ')}`,
-    );
-  }
+  // Delegate MapLibre allowlist to the plugin to avoid duplication.
+  const mapFindings = createMapLibreAllowlist()({ ...ctx, pkgJson: ctx.pkgJson } as any);
+  for (const mf of mapFindings) f.push(mf);
 
   return f;
 }
@@ -117,12 +99,16 @@ export const ruleRegistry: Record<string, RuleRunner> = {
   'external-in-deps': only(new Set(['external-in-deps']), runRules),
   'ui-in-deps': only(new Set(['ui-in-deps']), runRules),
   'ui-missing-peer': only(new Set(['ui-missing-peer']), runRules),
+  // plugin: UI peer policy (package.json-only)
+  'ui-peer-policy': (ctx) => createUiPeerPolicy()(ctx),
   'paths-direct-src': only(new Set(['paths-direct-src']), runRules),
   'local-shims': only(new Set(['local-shims']), runRules),
   'skipLibCheck-no-reason': only(new Set(['skipLibCheck-no-reason']), runRules),
   'skipLibCheck-not-allowed': only(new Set(['skipLibCheck-not-allowed']), runRules),
   'tsconfig-no-base': only(new Set(['tsconfig-no-base']), runRules),
   'jsx-mismatch': only(new Set(['jsx-mismatch']), runRules),
+  // plugin: MapLibre allowlist (package.json-only)
+  'maplibre-allowlist': (ctx) => createMapLibreAllowlist()(ctx),
   'maplibre-direct-dep': only(new Set(['maplibre-direct-dep']), runRules),
   'source-import-ban': runSourceImportBan,
   'tsconfig-paths': runTsconfigPaths,

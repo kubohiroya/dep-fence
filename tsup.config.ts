@@ -6,6 +6,8 @@ export default defineConfig({
     cli: 'src/cli.ts',
     conditions: 'src/conditions.ts',
     guards: 'src/guards/index.ts',
+    'rules-plugins/uiPeerPolicy': 'src/rules-plugins/uiPeerPolicy.ts',
+    'rules-plugins/maplibreAllowlist': 'src/rules-plugins/maplibreAllowlist.ts',
   },
   format: ['esm'],
   dts: { entry: { index: 'src/index.ts', conditions: 'src/conditions.ts', types: 'src/types.ts', guards: 'src/guards/index.ts' } },

@@ -1,0 +1,7 @@
+{
+  "name": "@acme/feature-geo",
+  "version": "0.0.0-test",
+  "dependencies": {
+    "maplibre-gl": "^4.0.0"
+  }
+}

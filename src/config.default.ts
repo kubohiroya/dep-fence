@@ -1,94 +1,91 @@
 import type { Policy } from './types';
 import { all, any, hasSkipLibCheck, isPublishable, isUI, usesTsup } from './conditions';
 
-// デフォルトポリシー（詳細コメント付き）
-// 目的: 「どの属性に該当するから、そのルールを課すのか」を常に説明できるようにする。
-// 注意: UI関連の制約は公開パッケージ（publishable）にのみ適用し、アプリ（private）は除外します。
+// Default policy set with explanatory comments.
+// Intent: Always explain why a rule applies by tying it to package attributes.
+// Note: UI-specific constraints apply to publishable packages; private apps are out of scope.
 
 export const defaultPolicies: Policy[] = [
-  // UIパッケージはReact/MUIをバンドルせず、ホストアプリの単一インスタンスに寄りかかる
+  // UI packages should not bundle React/MUI; rely on the host app's singleton peers.
   {
     id: 'ui-externals-and-peers',
-    // アプリは除外したいので isUI && isPublishable
+    // Apply only to publishable UI packages (apps typically excluded).
     when: all(isUI(), isPublishable()),
-    because: 'UIパッケージはReact/MUI等をバンドルせず、ホスト側の単一インスタンス（peer）に依存すべきため。',
+    because: 'UI libraries should rely on host-provided singletons and avoid bundling shared frameworks.',
     rules: [
-      // 依存（dependencies）に置かない
-      'ui-in-deps',
-      // インストールしているが peer に載っていない
-      'ui-missing-peer',
-      // peerDependencies ⊆ tsup.external を担保
+      // Package.json-only peer checks via plugin
+      'ui-peer-policy',
+      // Ensure peers are externalized in bundling tools
       'peer-in-external',
     ],
   },
 
-  // tsup利用パッケージはpeerを必ずexternalにする（多重バンドル防止）
+  // When using tsup, make peers external to prevent double-bundling.
   {
     id: 'tsup-peer-hygiene',
     when: usesTsup(),
-    because: 'tsupでバンドルするパッケージはpeer依存を必ずexternalにして多重バンドルを防ぐため。',
+    because: 'Packages bundled with tsup should externalize peers to avoid duplicate bundles.',
     rules: [
       'peer-in-external',
-      // external 指定なのに dependencies にもある→peerへ移行を促す
+      // If something is marked external but also appears in dependencies, suggest moving it to peers.
       'external-in-deps',
     ],
   },
 
-  // 公開パッケージのTypeScript構成の衛生: ベース継承と../src参照禁止
+  // Publishable TS hygiene: extend the repo base and avoid ../src path mapping.
   {
     id: 'publishable-tsconfig-hygiene',
     when: isPublishable(),
-    because: '公開物はリポジトリ標準のtsconfigを継承し、他パッケージの../srcを直参照しないため。',
+    because: 'Published packages should inherit the repo tsconfig and avoid direct ../src cross-links.',
     rules: [
       'tsconfig-no-base',
       'paths-direct-src',
     ],
   },
 
-  // 公開パッケージではローカル型シム（*.d.ts）を極力避ける（やむを得ない場合は短期運用）
+  // Discourage long-lived local declaration shims (*.d.ts) in publishable packages.
   {
     id: 'publishable-local-shims',
     when: isPublishable(),
-    because: '配布物の型安全性と将来の保守性のため、ローカル型シムの恒常化を避けるため。',
+    because: 'Avoid normalizing local shims that mask type issues; prefer fixing at the source.',
     rules: ['local-shims'],
-    // 当面はWARN。段階的にERRORへ引き上げ可。
+    // Start as WARN; can be raised to ERROR later.
     severityOverride: { 'local-shims': 'WARN' },
   },
 
-  // TSXがあるならjsx: react-jsx を明示
+  // If TSX is present, enforce jsx: react-jsx for predictable emit/inference.
   {
     id: 'jsx-option-for-tsx',
     when: all(isPublishable(), isUI()),
-    because: 'TSXソースの型推論とJSX emit整合のため、jsx: react-jsx を推奨/要求するため。',
+    because: 'Enforce jsx: react-jsx for TSX to align emit and type inference.',
     rules: ['jsx-mismatch'],
   },
 
-  // skipLibCheckの統制（原則禁止、やむを得ない場合は理由が必要）
+  // Govern skipLibCheck (prefer disabled; require explicit reason or allowlist when enabled).
   {
     id: 'skipLibCheck-governance',
     when: hasSkipLibCheck(),
-    because: 'skipLibCheckは型の負債トグルであり、恒常化を防ぐために理由の明示 or 例外登録が必要なため。',
+    because: 'skipLibCheck is technical debt; require an explicit reason or repo-level allowlist.',
     rules: [
-      // 許可なく有効化
       'skipLibCheck-not-allowed',
-      // 許可はあるが理由未記載
       'skipLibCheck-no-reason',
     ],
   },
 
-  // UI以外（Node/ツール系）でも ../src 直参照はリリース品質を下げるので抑止（緩め）
+  // For non-UI packages, discourage ../src direct references to preserve release quality.
   {
     id: 'non-ui-paths-hygiene',
     when: any(isPublishable()),
-    because: 'ビルド成果物の安定性のため、公開物では他パッケージの../src直参照を避けるため。',
+    because: 'Keep artifacts stable by avoiding direct ../src links into other packages.',
     rules: ['paths-direct-src'],
   },
 
-  // MapLibre カプセル化ポリシー: maplibre-gl/@vis.gl/react-maplibre は ui-map 以外で直接依存禁止
+  // MapLibre encapsulation: only the designated wrapper should depend on maplibre libs.
   {
     id: 'maplibre-encapsulation',
     when: any(isPublishable()),
-    because: 'MapLibre の型/実装差分は @hierarchidb/ui-map で吸収し、下位パッケージへ漏らさないため。',
-    rules: ['maplibre-direct-dep'],
+    because: 'Isolate MapLibre differences inside the wrapper package and avoid leaking dependencies downstream.',
+    rules: ['maplibre-allowlist'],
+    options: { 'maplibre-allowlist': { allow: ['@hierarchidb/ui-map'] } },
   },
 ];
