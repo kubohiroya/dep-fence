@@ -31,10 +31,12 @@
 - **What it is**: リポジトリ全体の依存関係境界を守る軽量なポリシー駆動ガードレール。境界越えを検知し、必要なら CI を失敗させます。典型的な用途: Public API のみの import 強制、UI/ドメイン層の分離、`peerDependencies` とバンドラ externals の整合、`tsconfig` の健全化、`skipLibCheck` の管理 ― いずれも明示的な「Because: …」つき。
 - **Problems it solves**: deep import の漏れ、モノレポにおける偶発的なパッケージ間結合、公開時に壊れる型/エクスポートのズレ、peer と bundler external の不一致、JSX オプションの不整合など。
 - **How it compares and when to use which**:
-    - [ESLint](https://eslint.org): ファイル単位の AST/スタイルルールに最適。ファイル内は ESLint、ファイル間/パッケージ間の境界やアーキテクチャ層は dep‑fence。
-    - [madge](https://github.com/pahen/madge) / [dependency‑cruiser](https://github.com/sverweij/dependency-cruiser): グラフの可視化や柔軟な解析に優秀。探索/複雑なグラフ規則はこれら、CI ファーストで単純な allow/forbid のポリシー運用は dep‑fence。
-    - [syncpack](https://github.com/JamieMason/syncpack): package.json のバージョンやワークスペース範囲の整頓。マニフェスト衛生は syncpack、実行/ビルド時の import と peer/bundler の整合は dep‑fence。
-    - [publint](https://publint.dev): 公開パッケージの形状検証。利用者保護は publint、公開前のソース側の境界遵守は dep‑fence。
+  - [ESLint](https://eslint.org): ファイル単位の静的解析とスタイル/バグ検出に最適。ファイル内の課題は ESLint（必要に応じて `import/no-internal-modules` や `no-restricted-imports` などのルールも）に任せ、パッケージ横断の境界やリポジトリ全体のポリシーは dep-fence を使用。
+  - [Knip](https://knip.dev): **未使用/不足依存（unused/missing dependencies）** と **未使用ファイル/エクスポート** を検出し、**モノレポを第一級でサポート**。依存関係の棚卸しとデッドコードの可視化には Knip、パッケージ境界ポリシーと CI ゲーティングには dep-fence —— 互いを補完します。
+  - [dependency-cruiser](https://www.npmjs.com/package/dependency-cruiser) / [madge](https://github.com/pahen/madge): 依存グラフの可視化と検証に有用。探索や複雑なグラフ規則にはこれら、単純な allow/forbid で回せる意見主導・CI ファーストのポリシーエンジンとしては dep-fence。
+  - [syncpack](https://jamiemason.github.io/syncpack/): モノレポ全体でバージョンやワークスペース範囲の整合性を維持。マニフェスト衛生は syncpack、実行/ビルド時の import と peer/bundler の整合は dep-fence。
+  - [publint](https://publint.dev): **公開パッケージの表面（exports/fields）** をリンティングし、環境互換性やよくある落とし穴を検出。publint は利用者を保護し、dep-fence は公開前にソースが境界を尊重しているかを守る役割。
+  - （任意）[Are the Types Wrong? (attw)](https://github.com/arethetypeswrong/arethetypeswrong.github.io/tree/main/packages/cli): 公開成果物の **TypeScript 型解決/エクスポート** を検証。publint と組み合わせるとリリースパイプラインで相性良好。
 
 ### Why dep‑fence? ✨
 - 条件駆動のルール（例: UI かつ publishable なパッケージにのみ適用）。
@@ -43,7 +45,7 @@
 - `tsconfig` を健全に保つ（ベース継承、`../src` の直接参照禁止、JSX オプションの整合）。
 - すべてのメッセージに「Because: …」を含め、ポリシー意図を見える化。🗣️
 
-> dep-fenceは既存ツールを補完します — [dependency‑cruiser] / [ESLint] / [syncpack] / [publint] と併用してください。
+これは、既存のリンター、グラフ解析ツール、依存関係インベントリツール、そしてパッケージ公開の検証ツールと並走して機能します。これらを組み合わせることで、ファイル内の品質、依存関係の衛生管理、リリース準備性をカバーできます —— 一方で dep-fence は、パッケージ横断の境界を強制し、CI ファーストのポリシー・ガードレールを提供します。
 
 ### How it works? 🧭
 

@@ -11,7 +11,7 @@ This helps automate reviews, clarify next steps, and connect findings directly t
 
 - [What, Why & How 💡](#what-why--how-)
 - [Install 📦](#install-)
-- [Getting Started 🛣️](#getting-started-)
+- [Getting Started 🛣️](#getting-started-)a
 - [Basic Usage 🖥️](#basic-usage-)
 - [Advanced Usage 💪](#advanced-usage-)
   - [Policy Configuration 🛠️](#policy-configuration-)
@@ -32,10 +32,12 @@ This helps automate reviews, clarify next steps, and connect findings directly t
 - What it is: A lightweight, policy‑driven guardrail for repository‑wide dependency boundaries. It detects boundary crossings and can fail CI. Typical use: enforce public‑API‑only imports, keep UI/domain layers separate, align peerDependencies with bundler externals, keep tsconfig sane, and govern skipLibCheck — always with an explicit “Because: …”.
 - Problems it solves: deep import leaks, accidental cross‑package coupling in monorepos, type/exports drift that breaks publishing, peer vs bundler external mismatches, JSX option inconsistencies, and more.
 - How it compares and when to use which:
-  - [ESLint](https://eslint.org): great for per‑file AST/style rules. Keep ESLint for in‑file concerns; use dep‑fence for cross‑file/package dependency edges and architectural layers.
-  - [madge](https://github.com/pahen/madge) / [dependency‑cruiser](https://github.com/sverweij/dependency-cruiser): excellent for graph visualization and flexible analysis. Use those for exploration/complex graph rules; use dep‑fence for an opinionated, CI‑first, monorepo‑friendly policy engine with simple allow/forbid semantics.
-  - [syncpack](https://github.com/JamieMason/syncpack): keeps versions and workspace ranges tidy in package.json. Use syncpack for manifest hygiene; use dep‑fence for runtime/build‑time import and peer/bundler alignment.
-  - [publint](https://publint.dev): validates the shape of published packages. publint protects consumers; dep‑fence keeps your source respecting boundaries before you publish.
+  - [ESLint](https://eslint.org): great for per-file static analysis and style/bug-catching. Use ESLint for in-file concerns (optionally with rules like `import/no-internal-modules` or `no-restricted-imports`); use dep-fence for cross-package boundaries and repo-level policies.
+  - [Knip](https://knip.dev): finds **unused/missing dependencies** and **unused files/exports**, with **first-class monorepo support**. Use Knip for dependency inventory & dead-code surfacing; use dep-fence for boundary policies and CI gating — they complement each other.
+  - [dependency-cruiser](https://www.npmjs.com/package/dependency-cruiser) / [madge](https://github.com/pahen/madge): visualize and validate dependency graphs. Use them for exploration and complex graph rules; use dep-fence for an opinionated, CI-first policy engine with simple allow/forbid semantics.
+  - [syncpack](https://jamiemason.github.io/syncpack/): keeps versions and workspace ranges consistent across a monorepo. Use syncpack for manifest hygiene; use dep-fence for runtime/build-time import and peer/bundler alignment.
+  - [publint](https://publint.dev): lints the **published package surface** for environment compatibility and common mistakes. publint protects consumers; dep-fence keeps sources respecting boundaries before you publish.
+  - *(optional)* [Are the Types Wrong? (attw)](https://github.com/arethetypeswrong/arethetypeswrong.github.io/tree/main/packages/cli): validates **TypeScript type resolution**/exports of published output; pairs well with publint in release pipelines.
 
 ### Why dep‑fence? ✨
 - Condition‑driven rules (e.g., apply only to packages that are UI + publishable).
@@ -44,8 +46,7 @@ This helps automate reviews, clarify next steps, and connect findings directly t
 - Keep `tsconfig` healthy (baseline inheritance, forbid `../src` direct references, JSX option sanity).
 - Every message includes “Because: …”, making policy intent visible. 🗣️
 
-> This complements existing tools — use with [dependency‑cruiser](https://github.com/sverweij/dependency-cruiser) / [ESLint](https://eslint.org) / [syncpack](https://github.com/JamieMason/syncpack) / [publint](https://publint.dev).
-
+It works alongside your existing linters, graph analyzers, dependency inventory tools, and package-publish validators. Together they cover in-file quality, dependency hygiene, and release readiness — while dep-fence enforces cross-package boundaries and provides CI-first policy guardrails.
 
 ### How it works? 🧭
 
